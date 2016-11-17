@@ -1,0 +1,237 @@
+#!/bin/bash
+
+set -e
+
+if test -f config.custom ; then
+	. config.custom
+else
+	. config
+fi
+
+if test -n "$TOOLCHAIN_DIR" -a -d "$TOOLCHAIN_DIR"; then
+    PATH=$TOOLCHAIN_DIR/bin:$PATH
+fi
+
+if test -n "$CROSS_COMPILE" ; then
+    cross="--build=$(e2fsprogs-libs/config/config.guess) --host=$CROSS_COMPILE"
+    crossfio="--cc=$CROSS_COMPILE-gcc"
+fi
+
+case "$CROSS_COMPILE" in
+    *-android|*-androideabi)
+	DO_ANDROID=yes
+	SKIP_KVM_UTILS=yes
+	SKIP_QUOTA=yes
+	SKIP_FIO=yes
+	SKIP_DBENCH=yes
+	;;
+esac
+
+function build_start () {
+    echo "------------------------ Starting build of $*"
+}
+
+function set_skip_all () {
+    unset DO_F2FSTOOLS
+    SKIP_E2FSLIBS=yes
+    SKIP_ATTR=yes
+    SKIP_ACL=yes
+    SKIP_POPT=yes
+    SKIP_AIO=yes
+    SKIP_DBENCH=yes
+    SKIP_FIO=yes
+    SKIP_XFSPROGS=yes
+    SKIP_XFSTESTS=yes
+    SKIP_QUOTA=yes
+    SKIP_KVM_UTILS=yes
+}
+
+while [ "$1" != "" ]; do
+    case $1 in
+	--skip-dbench)
+	    SKIP_DBENCH=yes
+	    ;;
+	--skip-quota)
+	    SKIP_QUOTA=yes
+	    ;;
+	--attr-only)
+	    set_skip_all
+	    unset SKIP_ATTR
+	    ;;
+	--acl-only)
+	    set_skip_all
+	    unset SKIP_ACL
+	    ;;
+	--popt-only)
+	    set_skip_all
+	    unset SKIP_POPT
+	    ;;
+	--aio-only)
+	    set_skip_all
+	    unset SKIP_AIO
+	    ;;
+	--e2fslibs-only)
+	    set_skip_all
+	    unset SKIP_E2FSLIBS
+	    ;;
+	--dbench-only)
+	    set_skip_all
+	    unset SKIP_DBENCH
+	    ;;
+	--fio-only)
+	    set_skip_all
+	    unset SKIP_FIO
+	    ;;
+	--quota-only)
+	    set_skip_all
+	    unset SKIP_QUOTA
+	    ;;
+	--xfsprogs-only)
+	    set_skip_all
+	    unset SKIP_XFSPROGS
+	    ;;
+	--xfstests-only)
+	    set_skip_all
+	    unset SKIP_XFSTESTS
+	    ;;
+	--kvm-utils-only)
+	    set_skip_all
+	    unset SKIP_KVM_UTILS
+	    ;;
+	--f2fstools-only)
+	    set_skip_all
+	    set DO_F2FSTOOLS
+	    ;;
+	*)
+	    echo "Unknown option: $1"
+	    exit 1
+	    ;;
+    esac
+    shift
+done
+
+J=-j4
+
+if test -z "$USE_DESTDIR" ; then
+    DESTDIR=$(pwd)/bld
+    mkdir -p $DESTDIR
+fi
+
+if test -n "$DO_ANDROID" ; then
+    build_start "Android compatibility library"
+    (cd android-compat; ./configure $cross ;  make $J prefix=$DESTDIR install)
+    android_compat="-landroid_compat"
+    LCF="-fpie -include android_compat.h"
+    LLF="-pie"
+else
+    LCF="-g -O2"
+fi
+
+if test -n "$DO_F2FSTOOLS" ; then
+    build_start "f2fs-tools"
+    (cd f2fs-tools; ./autogen.sh ; \
+     ver=$(git describe --tags --always --dirty); echo "f2fs-tools     $ver ($(git log -1 --pretty=%cD))" > ../f2fs-tools.ver ; \
+     ./configure ; \
+     make $J ; \
+     make install)
+fi
+
+if test -z "$SKIP_E2FSLIBS" ; then
+    build_start "e2fslibs"
+    (cd e2fsprogs-libs; \
+     ./configure ; make $J; \
+     make $J install)
+fi
+
+if test -z "$SKIP_ATTR" ; then
+    build_start "extended attribute library"
+    (cd attr; \
+     ./configure ; \
+     make $J ; \
+     make $J install-dev ; make $J install)
+fi
+
+if test -z "$SKIP_ACL" ; then
+    build_start "ACL library"
+    (cd acl; \
+     ./configure ; \
+     make $J ; \
+     make $J install)
+fi
+
+if test -z "$SKIP_POPT" ; then
+    build_start "POPT library"
+    (cd popt; \
+     ./configure ; \
+     make $J ; \
+     make $J install)
+fi
+
+if test -z "$SKIP_AIO" ; then
+    build_start "AIO library"
+    (cd libaio; ./configure ; \
+     make $J install)
+fi
+
+if test -z "$SKIP_DBENCH" ; then
+    build_start "dbench"
+    (cd dbench; \
+     autoheader ; autoconf ; \
+     ./configure ; \
+     make $J ; )
+fi
+
+if test -z "$SKIP_XFSPROGS" ; then
+    build_start "xfsprogs"
+    (cd xfsprogs-dev; make $J realclean ; make $J configure ; \
+     ver=$(git describe --always --dirty); echo "xfsprogs	$ver ($(git log -1 --pretty=%cD))" > ../xfsprogs.ver ; \
+     aclocal -I m4 ; autoconf -I m4 ; \
+     ./configure ; \
+     make $J ; \
+     make $J install; \
+     make $J install-dev)
+fi
+
+if test -z "$SKIP_FIO"; then
+    (cd fio; \
+     ver=$(git describe --always --dirty); echo "fio		$ver ($(git log -1 --pretty=%cD))" > ../fio.ver ; \
+     ./configure ; \
+     make $J; \
+     make $J install)
+fi
+
+if test -z "$SKIP_XFSTESTS" ; then
+    build_start "xfstests"
+    (cd xfstests-dev; \
+     ver=$(git describe --always --dirty); echo "xfstests	$ver ($(git log -1 --pretty=%cD))" > ../xfstests.ver ; \
+     autoheader ; autoconf ; \
+     ./configure ; \
+     make $J)
+fi
+
+if test -z "$SKIP_QUOTA"; then
+    build_start "quota-tools"
+    #
+    # Hack around older quota-tools's lack of cross compilation support
+    #
+    if test -f quota/Makefile.in && ! grep -q "@CC@" quota/Makefile.in ; then
+	echo "No @CC@"
+	ed quota/Makefile.in <<EOF
+1i
+CC	      = @CC@
+.
+w
+q
+EOF
+    fi
+    (cd quota; \
+     ver=$(git describe --always --dirty); echo "quota		$ver ($(git log -1 --pretty=%cD))" > ../quota.ver ; \
+     autoreconf -fvi ; \
+     ./configure ; \
+     make $J; make $J install)
+fi
+
+if test -z "$SKIP_KVM_UTILS"; then
+    (cd misc ; ./configure ; \
+     make $J ; make $J install)
+fi

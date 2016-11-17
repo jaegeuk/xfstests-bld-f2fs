@@ -1,0 +1,89 @@
+#!/bin/bash
+
+ROOT=/root/
+KERNEL=$HOME/linux
+WORKDIR=$PWD/kvm-xfstests
+LOG=/tmp/log
+EMAIL=jaegeuk.kim@gmail.com
+LAST_F2FS=v4.9-rc6
+LAST_STABLE=4.9-rc1
+LOOP=0
+
+echo "============================="
+echo " 1. Build rootfs"
+echo "  # sudo ./gen-image"
+echo ""
+echo " 2. kvm-xfstests cmd"
+echo "  # ./kvm-xfstests generic/001"
+echo "  # ./kvm-xfstests shell"
+echo "    $ FSTESTSET="generic/001""
+echo "    $ /root/runtests.sh"
+echo " https://github.com/tytso/xfstests-bld/blob/master/Documentation/kvm-xfstests.md"
+echo "============================="
+
+t="f2fs"
+t="$t 4.4"
+t="$t 4.2"
+t="$t 4.1"
+t="$t 3.18"
+t="$t 3.10"
+
+_build_all()
+{
+	for i in $t
+	do
+		cd $ROOT/$i
+
+		echo "========= Git pull: $i =========="
+		ping -c1 mac >/dev/null 2>/dev/null
+		if [ $? -eq 0 ]; then
+			if [ $i == "f2fs" ]; then
+				git reset --hard "$LAST_F2FS"
+			else
+				git reset --hard "$LAST_STABLE-$i"
+			fi
+			git pull >>$LOG 2>>$LOG
+		fi
+		echo "======== Build Kernel: $i ======="
+		make bzImage -j4 >>$LOG 2>>$LOG
+	done
+}
+
+_test_all()
+{
+	while true
+	do
+		rm $WORKDIR/logs/* 2>/dev/null
+		rm $LOG
+		for i in $t
+		do
+			rm $KERNEL >>$LOG 2>>$LOG
+			ln -s "$ROOT/$i" $KERNEL
+
+			echo ""
+			echo "===> Start [$i]"
+			cd $WORKDIR
+			if [ $i == "3.10" ]; then
+				cp config.3.10 config.custom
+			else
+				cp config.f2fs config.custom
+			fi
+			echo "==== Start kvm-xfstests ====="
+			#./kvm-xfstests generic/074 generic/075
+			./kvm-xfstests full >>$LOG 2>>$LOG
+		done
+		cd $WORKDIR
+		./get-results -F | mutt -s "$LOOP: Test Results" $EMAIL
+		LOOP=$(($LOOP + 1))
+	done
+}
+
+case $1 in
+build)
+	_build_all;;
+test)
+	_test_all;;
+*)
+	echo "sudo ./f2fs-all [build|test]"
+	;;
+esac

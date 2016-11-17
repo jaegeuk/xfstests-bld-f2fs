@@ -9,7 +9,6 @@
 .libs
 config.log
 config.status
-config.custom
 MAKELOG
 /kvm-xfstests/config-*
 /kvm-xfstests.sh

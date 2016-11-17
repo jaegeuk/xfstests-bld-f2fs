@@ -1,0 +1,31 @@
+# Configuration file for xfstests-bld
+
+. config
+
+# For kvm-xfstests/gen-image
+SUITE=jessie
+PLATFORM=$SUITE-64
+MIRROR=http://mirrors.kernel.org/debian
+SKIP_UPDATE=yes
+
+# For ./build-all
+XFSTESTS_GIT="jaegeuk@mac:~/Work/xfstests-f2fs"
+#git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
+F2FSTOOLS_GIT="jaegeuk@mac:~/Work/f2fs-tools"
+#git://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git
+DO_F2FSTOOLS=yes
+
+SKIP_E2FSLIBS=yes
+SKIP_AIO=yes
+SKIP_ACL=yes
+SKIP_ATTR=yes
+SKIP_QUOTA=yes
+SKIP_DBENCH=yes
+
+SUBDIRS="f2fs-tools $SUBDIRS"
+
+# override for chroot build
+BUILD_ENV="schroot -c $PLATFORM --"
+SUDO_ENV="schroot -c $PLATFORM -u root --"
+EXEC_LDFLAGS=
+EXEC_LLDFLAGS=

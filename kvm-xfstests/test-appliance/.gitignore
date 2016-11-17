@@ -5,6 +5,5 @@ rootdir
 var.cache.apt.archives
 var.lib.apt.lists
 mirror
-config.custom
 files/root/xfstests/git-versions
 !xfstests

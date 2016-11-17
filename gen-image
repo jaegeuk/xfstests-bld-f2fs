@@ -1,0 +1,72 @@
+#!/bin/bash
+#
+# This shell script must be run as root
+
+if test -f config.custom ; then
+	. config.custom
+else
+	. config
+fi
+
+DIR=$(pwd)
+ROOTDIR=$DIR/$PLATFORM
+KVM=kvm-xfstests/test-appliance
+RAW_ROOT_FS=$DIR/root_fs.raw
+ROOT_FS=$KVM/root_fs.img
+COMPAT="-o compat=0.10"
+
+update_xfstests()
+{
+	tar -C $ROOTDIR/root -xf xfstests.tar.gz
+	rsync --exclude-from $KVM/kvm-exclude-files -avH $KVM/files/* $ROOTDIR
+	rsync -avH xfstests/git-versions $ROOTDIR/root/xfstests
+	chown -R root:root $ROOTDIR/root
+}
+
+finalize_rootfs()
+{
+	e2fsck -fyD $RAW_ROOT_FS
+	e2fsck -fy -E discard $RAW_ROOT_FS
+	qemu-img convert -f raw -O qcow2 $COMPAT -c $RAW_ROOT_FS $ROOT_FS
+	rm $RAW_ROOT_FS
+}
+
+echo " === This shell script must be run as root ==="
+echo -n "Want to initialize? [y/n] "
+read ans
+if [ $ans == "y" ]; then
+	cd $KVM
+	./gen-image
+	cd $DIR
+fi
+
+mkdir -p $ROOTDIR
+qemu-img convert -f qcow2 -O raw $ROOT_FS $RAW_ROOT_FS
+mount -t ext4 -o loop $RAW_ROOT_FS $ROOTDIR
+
+./get-all
+make clean
+
+echo -n "Want to build all? [y/n] "
+read ans
+if [ $ans == "y" ]; then
+	echo "===================="
+	echo " ./build-all"
+	echo " ldconfig"
+	echo "===================="
+	$SUDO_ENV ./build-all-chroot
+	$SUDO_ENV ldconfig
+
+	make tarball
+	update_xfstests
+fi
+
+echo -n "Want to initialize internal? [y/n] "
+read ans
+if [ $ans == "y" ]; then
+	$SUDO_ENV ./init-image
+fi
+
+umount $ROOTDIR
+rm -rf $ROOTDIR
+finalize_rootfs

@@ -20,6 +20,19 @@ If you don't know much about xfstests, you may also want to read this
 [introduction to xfstests](Documentation/what-is-xfstests.md).
 
 
+# ==== F2FS ====
+
+* sudo ./gen-image
+
+select "y" and "y" for two questions to initialize the rootfs.img
+1. create a default image with xfstests-packages
+2. build xfstests and releated packages without --static
+3. update configuration files for xfstests in the image
+
+* sudo ./f2fs-all
+
+run xfstests for kernels
+
 ## License
 
 The xfstests-bld project has been made available under the terms of

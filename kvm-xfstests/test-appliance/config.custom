@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if test -r ../../config.custom ; then
+	cd ../../
+	. config.custom
+	cd $DIR
+fi

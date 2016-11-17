@@ -1,0 +1,2 @@
+PRIMARY_FSTYPE="f2fs"
+FSTESTEXC="generic/323"
