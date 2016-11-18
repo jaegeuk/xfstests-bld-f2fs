@@ -1,0 +1,8 @@
+# Configuration file for xfstests-bld
+
+. config
+
+F2FSTOOLS_GIT=git://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git
+DO_F2FSTOOLS=yes
+
+SUBDIRS="f2fs-tools $SUBDIRS"
