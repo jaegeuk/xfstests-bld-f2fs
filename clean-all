@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+if test -f config.custom ; then
+	. config.custom
+else
+	. config
+fi
+
+for i in $SUBDIRS
+do
+	if test -f $i/Makefile ; then make -C $i clean ; fi ; \
+done
+
+make -C xfsprogs-dev realclean
+rm -rf bld xfstests
+rm -f kvm-xfstests/util/zerofree gce-xfstests.sh kvm-xfstests.sh
