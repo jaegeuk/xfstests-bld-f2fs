@@ -32,6 +32,7 @@ function build_start () {
 }
 
 function set_skip_all () {
+    unset DO_F2FSTOOLS
     SKIP_E2FSLIBS=yes
     SKIP_ATTR=yes
     SKIP_ACL=yes
@@ -97,6 +98,10 @@ while [ "$1" != "" ]; do
 	    set_skip_all
 	    unset SKIP_KVM_UTILS
 	    ;;
+	--f2fstools-only)
+	    set_skip_all
+	    set DO_F2FSTOOLS
+	    ;;
 	*)
 	    echo "Unknown option: $1"
 	    exit 1
@@ -120,6 +125,16 @@ if test -n "$DO_ANDROID" ; then
     LLF="-pie"
 else
     LCF="-g -O2"
+fi
+
+if test -n "$DO_F2FSTOOLS" ; then
+    build_start "f2fs-tools"
+    (cd f2fs-tools; ./autogen.sh ; \
+     ver=$(git describe --tags --always --dirty); echo "f2fs-tools     $ver ($(git log -1 --pretty=%cD))" > ../f2fs-tools.ver ; \
+     LDFLAGS="$LLF $EXEC_LDFLAGS -L$DESTDIR/lib" \
+     ./configure $cross --prefix=$DESTDIR ; \
+     make $J LDFLAGS=-all-static ; \
+     make install)
 fi
 
 if test -z "$SKIP_E2FSLIBS" ; then

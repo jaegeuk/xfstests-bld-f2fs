@@ -6,6 +6,19 @@ else
 	. config
 fi
 
+if test -n "$F2FSTOOLS_GIT" && test ! -d f2fs-tools ; then
+	if ! git clone $F2FSTOOLS_GIT f2fs-tools; then
+		echo "Failed to get f2fs-tools from $F2FSTOOLS_GIT"
+                exit 1
+	fi
+	if test -n "$F2FSTOOLS_COMMIT"; then
+		cd f2fs-tools
+		git branch xfstests-bld $F2FSTOOLS_COMMIT
+		git checkout xfstests-bld
+		cd ..
+	fi
+fi
+
 if test ! -d xfsprogs-dev
 then
 	if test -z "$XFSPROGS_GIT"; then

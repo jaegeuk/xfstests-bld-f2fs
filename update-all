@@ -13,6 +13,11 @@ DESTDIR=$(pwd)/bld
 
 mkdir -p $DESTDIR
 
+if test -d f2fs-tools; then
+	(cd f2fs-tools; \
+	make $J LDFLAGS=-all-static ; make install)
+fi
+
 (cd e2fsprogs-libs; \
 	make $J; make DESTDIR=$DESTDIR $J install)
 
