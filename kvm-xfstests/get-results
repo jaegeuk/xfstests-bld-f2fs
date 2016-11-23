@@ -18,16 +18,21 @@ IN="$*"
 
 if test -z "$IN"
 then
-    IN=$(/bin/ls -t logs/log.* | head -1)
+    IN=$(ls -t logs/log.* )
 fi
 
-egrep "$REGEXP" "$IN"
-if test -n "$do_failure"; then
-    b=$(egrep ^BEGIN "$IN" | wc -l)
-    e=$(egrep ^END "$IN" | wc -l)
-    if test "$b" -gt "$e" ; then
-	l=$(egrep ^BEGIN "$IN" | tail -n 1 | sed -e 's/BEGIN //')
-	echo " "
-	echo Missing END "$l"
-    fi
-fi
+for i in $IN; do
+	echo ""
+	echo "---------------------------------------------------"
+	echo ""
+	egrep "$REGEXP" "$i"
+	if test -n "$do_failure"; then
+		b=$(egrep ^BEGIN "$i" | wc -l)
+		e=$(egrep ^END "$i" | wc -l)
+		if test "$b" -gt "$e" ; then
+			l=$(egrep ^BEGIN "$i" | tail -n 1 | sed -e 's/BEGIN //')
+			echo " "
+			echo Missing END "$l"
+		fi
+	fi
+done
