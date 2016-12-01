@@ -69,6 +69,9 @@ then
 		git checkout xfstests-bld
 		cd ..
 	fi
+	cd fio
+	git am ../patches/fio/*
+	cd ..
 fi
 if test ! -d quota
 then

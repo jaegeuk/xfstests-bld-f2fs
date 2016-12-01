@@ -1,0 +1,27 @@
+From 437dac805c18d25d9e00853fd2e69f9789799bf1 Mon Sep 17 00:00:00 2001
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Date: Wed, 30 Nov 2016 16:18:05 -0800
+Subject: [PATCH] iasdf
+
+Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
+---
+ filesetup.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/filesetup.c b/filesetup.c
+index 969e7cc..61daa8c 100644
+--- a/filesetup.c
++++ b/filesetup.c
+@@ -613,6 +613,9 @@ open_again:
+ 		if (__e == EMFILE && file_close_shadow_fds(td))
+ 			goto open_again;
+ 
++		if (__e == ENOSPC)
++			goto open_again;
++
+ 		snprintf(buf, sizeof(buf), "open(%s)", f->file_name);
+ 
+ 		if (__e == EINVAL && (flags & OS_O_DIRECT)) {
+-- 
+1.9.1
+
