@@ -28,53 +28,80 @@ t="$t 4.1"
 t="$t 3.18"
 t="$t 3.10"
 
+_build()
+{
+	cd $ROOT/$1
+
+	echo "========= Git pull: $1 =========="
+
+	if [ $1 == "f2fs" ]; then
+		TARGET="kernel.org"
+	else
+		TARGET="mac"
+	fi
+	ping -c1 $TARGET>/dev/null 2>/dev/null
+	if [ $? -eq 0 ]; then
+		if [ $1 == "f2fs" ]; then
+			git reset --hard "$LAST_F2FS"
+		else
+			git reset --hard "$LAST_STABLE-$1"
+		fi
+		git pull >>$LOG 2>>$LOG
+	fi
+	echo "======== Build Kernel: $1 ======="
+	make bzImage -j4 >>$LOG 2>>$LOG
+}
+
 _build_all()
 {
 	for i in $t
 	do
-		cd $ROOT/$i
-
-		echo "========= Git pull: $i =========="
-		ping -c1 mac >/dev/null 2>/dev/null
-		if [ $? -eq 0 ]; then
-			if [ $i == "f2fs" ]; then
-				git reset --hard "$LAST_F2FS"
-			else
-				git reset --hard "$LAST_STABLE-$i"
-			fi
-			git pull >>$LOG 2>>$LOG
-		fi
-		echo "======== Build Kernel: $i ======="
-		make bzImage -j4 >>$LOG 2>>$LOG
+		_build $i
 	done
+}
+
+_test()
+{
+	rm $WORKDIR/logs/* 2>/dev/null
+	rm $LOG
+	for i in $t
+	do
+		rm $KERNEL >>$LOG 2>>$LOG
+		ln -s "$ROOT/$i" $KERNEL
+
+		echo ""
+		echo "===> Start [$i]"
+		cd $WORKDIR
+		if [ $i == "3.10" ]; then
+			cp config.3.10 config.custom
+		else
+			cp config.f2fs config.custom
+		fi
+		echo "==== Start kvm-xfstests ====="
+		export LOGFILE=$LOOP-$i
+		#./kvm-xfstests generic/074 generic/075
+		./kvm-xfstests full >>$LOG 2>>$LOG
+	done
+
+	cd $WORKDIR
+	./get-results -F | mutt -s "$LOOP: Test Results" $EMAIL
+	LOOP=$(($LOOP + 1))
 }
 
 _test_all()
 {
 	while true
 	do
-		rm $WORKDIR/logs/* 2>/dev/null
-		rm $LOG
-		for i in $t
-		do
-			rm $KERNEL >>$LOG 2>>$LOG
-			ln -s "$ROOT/$i" $KERNEL
+		_test
+	done
+}
 
-			echo ""
-			echo "===> Start [$i]"
-			cd $WORKDIR
-			if [ $i == "3.10" ]; then
-				cp config.3.10 config.custom
-			else
-				cp config.f2fs config.custom
-			fi
-			echo "==== Start kvm-xfstests ====="
-			#./kvm-xfstests generic/074 generic/075
-			./kvm-xfstests full >>$LOG 2>>$LOG
-		done
-		cd $WORKDIR
-		./get-results -F | mutt -s "$LOOP: Test Results" $EMAIL
-		LOOP=$(($LOOP + 1))
+_build_test()
+{
+	while true
+	do
+		_build f2fs 
+		_test
 	done
 }
 
@@ -83,7 +110,9 @@ build)
 	_build_all;;
 test)
 	_test_all;;
+all)
+	_build_test;;
 *)
-	echo "sudo ./f2fs-all [build|test]"
+	echo "sudo ./f2fs-all [build|test|all]"
 	;;
 esac

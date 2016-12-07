@@ -131,7 +131,7 @@ if test -n "$DO_F2FSTOOLS" ; then
     build_start "f2fs-tools"
     (cd f2fs-tools; ./autogen.sh ; \
      ver=$(git describe --tags --always --dirty); echo "f2fs-tools     $ver ($(git log -1 --pretty=%cD))" > ../f2fs-tools.ver ; \
-     ./configure ; \
+     ./configure --prefix=/; \
      make $J ; \
      make install)
 fi
