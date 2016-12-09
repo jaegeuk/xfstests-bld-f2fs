@@ -28,7 +28,9 @@ fi
 
 EXTRA_ARG=$(echo "$EXTRA_ARG" | sed -e 's/:/ /')
 
-if test -n "$SKIP_LOG" ; then
+if test -n "$LOGFILE" ; then
+    LOGFILE="$DIR/logs/log.$LOGFILE"
+elif test -n "$SKIP_LOG" ; then
     LOGFILE=/tmp/log.$(date +%Y%m%d%H%M)
 else
     mkdir -p "$DIR/logs"
