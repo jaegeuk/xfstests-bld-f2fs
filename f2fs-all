@@ -5,8 +5,8 @@ KERNEL=$HOME/linux
 WORKDIR=$PWD/kvm-xfstests
 LOG=/tmp/log
 EMAIL=jaegeuk.kim@gmail.com
-LAST_F2FS=v4.9-rc6
-LAST_STABLE=4.9-rc1
+LAST_F2FS=852d21ae1fcdf0e4de6b5bfa730d29cb013c7ff3
+LAST_STABLE=4.10-rc1
 LOOP=0
 
 echo "============================="
@@ -63,7 +63,6 @@ _build_all()
 _test()
 {
 	rm $WORKDIR/logs/* 2>/dev/null
-	rm $LOG
 	for i in $t
 	do
 		rm $KERNEL >>$LOG 2>>$LOG
@@ -92,6 +91,7 @@ _test_all()
 {
 	while true
 	do
+		rm $LOG
 		_test
 	done
 }
@@ -100,6 +100,7 @@ _build_test()
 {
 	while true
 	do
+		rm $LOG
 		_build f2fs 
 		_test
 	done
@@ -112,7 +113,12 @@ test)
 	_test_all;;
 all)
 	_build_test;;
+kill)
+	pkill -f "/bin/bash ./f2fs-all all"
+	pkill kvm-xfstests
+	pkill qemu-system
+	;;
 *)
-	echo "sudo ./f2fs-all [build|test|all]"
+	echo "sudo ./f2fs-all [build|test|all|kill]"
 	;;
 esac
